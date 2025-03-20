@@ -1,0 +1,31 @@
+﻿
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.7.34024.191
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "Sims4ClipModifier", "Sims4ClipModifier.csproj", "{D47581C2-186A-4A45-95DA-87C0924D2AEF}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Debug|x64 = Debug|x64
+		Release|Any CPU = Release|Any CPU
+		Release|x64 = Release|x64
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{D47581C2-186A-4A45-95DA-87C0924D2AEF}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D47581C2-186A-4A45-95DA-87C0924D2AEF}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D47581C2-186A-4A45-95DA-87C0924D2AEF}.Debug|x64.ActiveCfg = Debug|x64
+		{D47581C2-186A-4A45-95DA-87C0924D2AEF}.Debug|x64.Build.0 = Debug|x64
+		{D47581C2-186A-4A45-95DA-87C0924D2AEF}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D47581C2-186A-4A45-95DA-87C0924D2AEF}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D47581C2-186A-4A45-95DA-87C0924D2AEF}.Release|x64.ActiveCfg = Release|x64
+		{D47581C2-186A-4A45-95DA-87C0924D2AEF}.Release|x64.Build.0 = Release|x64
+	EndGlobalSection
+	GlobalSection(SolutionProperties) = preSolution
+		HideSolutionNode = FALSE
+	EndGlobalSection
+	GlobalSection(ExtensibilityGlobals) = postSolution
+		SolutionGuid = {6C7096DC-6AE3-4918-BFA5-47E8BC9CA2E8}
+	EndGlobalSection
+EndGlobal
