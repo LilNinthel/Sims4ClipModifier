@@ -1,1 +1,3 @@
-This repository is primarily intended as an additional backup of my work, it will not run without modification on anyone else's computer.
+This repository is primarily intended as an additional backup of my work, it will not run without modification on anyone else's computer. It will quickly become unusable if not kept updated with current Sims 4 Studio dependencies.
+
+Studying it may be of interest if you would like to automate some Sims 4 Studio functions, especially relating to animations. It was created to simplify converting infant and toddler animations to older sims. It can make better conversions than S4S alone, as my program can selectively copy the IK data as well, allowed proper inverse kinematics where possible. All events are also kept, which are lost when importing .blend files into S4S. I would have burnt out long ago without the tremendous time-savings this program has given me.
