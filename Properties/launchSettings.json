@@ -1,0 +1,8 @@
+{
+  "profiles": {
+    "Sims4ClipModifier": {
+      "commandName": "Project",
+      "commandLineArgs": "-m objectSlotScaler --sourcePackage \"M:\\Sims 4 Mods\\Projects\\IwnBedwetting Extended Plus\\Workspace\\Enlarged Crib\\LilNinthel_Test_Crib.package\" --outputPackage \"M:\\Sims 4 Mods\\Projects\\IwnBedwetting Extended Plus\\Workspace\\Enlarged Crib\\LilNinthel_Test_Crib_Scaled.package\" --scale 1.2"
+    }
+  }
+}

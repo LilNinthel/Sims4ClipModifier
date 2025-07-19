@@ -1,4 +1,6 @@
-﻿using S4S;
+﻿using CommandLine;
+using Microsoft.VisualBasic.Logging;
+using S4S;
 using S4Studio;
 using S4Studio.Blender;
 using S4Studio.Converters;
@@ -7,36 +9,44 @@ using S4Studio.Data;
 using S4Studio.Data.FileDb;
 using S4Studio.Data.FileDb.Models;
 using S4Studio.Data.IO.Animation;
+using S4Studio.Data.IO.BuyBuild;
+using S4Studio.Data.IO.BuyBuild.Geometry;
+using S4Studio.Data.IO.BuyBuild.Slots;
 using S4Studio.Data.IO.CAS;
 using S4Studio.Data.IO.CAS.Geometry;
 using S4Studio.Data.IO.Core;
+using S4Studio.Data.IO.Core.Geometry;
 using S4Studio.Data.IO.Images;
+using S4Studio.Data.IO.Material;
 using S4Studio.Data.IO.Package;
 using S4Studio.Data.IO.Tags;
 using S4Studio.Data.IO.Tuning;
 using S4Studio.Data.Util;
 using S4Studio.Rendering;
 using S4Studio.Shared;
+using S4Studio.Shared.ViewModels.Objects;
 using S4Studio.Util;
 using S4Studio.ViewModels;
 using S4Studio.ViewModels.Animation;
 using S4Studio.ViewModels.CAS;
+using S4Studio.ViewModels.Generic;
 using Sims4ClipModifier;
 using System;
 using System.Collections.ObjectModel;
 using System.IO;
 using System.Linq;
+using System.Numerics;
 using System.Reflection;
 using System.Runtime.CompilerServices;
+using System.Runtime.InteropServices;
 using System.Security.Policy;
 using System.Text;
 using System.Text.RegularExpressions;
 using System.Windows.Forms;
 using System.Windows.Media.Converters;
 using System.Windows.Shapes;
-using Path = System.IO.Path;
-using CommandLine;
 using System.Xml.Linq;
+using Path = System.IO.Path;
 
 namespace Sims4Hasher
 {
@@ -67,6 +77,24 @@ namespace Sims4Hasher
 
             [Option("normalMapId")]
             public string NormalMapId { get; set; }
+
+            [Option("sourcePackage")]
+            public string SourcePackage { get; set; }
+
+            [Option("outputPackage")]
+            public string OutputPackage { get; set; }
+
+            [Option("scale")]
+            public float Scale { get; set; }
+
+            [Option("scaleX")]
+            public float ScaleX { get; set; }
+
+            [Option("scaleY")]
+            public float ScaleY { get; set; }
+
+            [Option("scaleZ")]
+            public float ScaleZ { get; set; }
 
             [Option("normalMapUseExisting")]
             public bool NormalMapUseExisting { get; set; }
@@ -429,7 +457,7 @@ namespace Sims4Hasher
             //AppModel.Instance.DoInit();
 
             BlenderUtilities blender_util = new BlenderUtilities(Settings.Default.BlenderPath);
-            //blender_util.CurrentVersion = "3.6";
+            blender_util.CurrentVersion = "4.4";
             //blender_util.InstallAddon();
 
             //foreach (var ai in items)
@@ -492,8 +520,8 @@ namespace Sims4Hasher
             //    //    }
             //    //}
             //}
-            
-            
+
+
 
             var originalClipDir = @"M:\Sims 4 Clip Export";
 
@@ -615,9 +643,6 @@ namespace Sims4Hasher
                         Console.WriteLine(clip.ClipName);
                     }
                 }
-
-
-
 
 
                 //posePack.ImportAnimation(@"M:\Sims 4 Infant Clip Exports\Adult\a_loco_crawl_bank_left_pose_x.blend");
@@ -1574,6 +1599,17 @@ namespace Sims4Hasher
                         case "diaperPackageMaker":
                             UniversalDiaperCASPackager(o, GlobalSource, blender_util); 
                             break;
+                        case "objectSlotScaler":
+                            ObjectSlotScaler(o, GlobalSource, blender_util);
+                            break;
+                        case "convertToBaseBuildMode":
+                            package = new DBPFPackage(o.SourcePackage);
+                            ConvertBuildToBaseGame(package);
+                            if (!string.IsNullOrWhiteSpace(o.OutputPackage))
+                                package.Save(o.OutputPackage);
+                            else
+                                package.Save();
+                            break;
                         case "breastfeed":
                             originalDir = args[2];
                             modDir = args[3];
@@ -1718,6 +1754,144 @@ namespace Sims4Hasher
             //}
 
             //Console.WriteLine(cr.Json);
+        }
+
+        public static IEnumerable<IResourceKey> ModelKeys(ISwatchResource swatch)
+        {
+            return swatch is IBuyBuildModelResource swatchResource ? swatchResource.AllModels() : Enumerable.Empty<IResourceKey>();
+        }
+
+        private static void ConvertBuildToBaseGame(DBPFPackage package)
+        {
+            var localSource = new PackageResourceProvider(package);
+
+
+            var catalogs = localSource.FindAllByType(ObjectCatalogResource.Type);
+
+            foreach (var catRes in catalogs)
+            {
+                var cat = catRes.Data<ObjectCatalogResource>();
+
+                var common = cat.Common.Clone();
+
+                common.PackIDInternal = 0;
+
+                cat.Common = common;
+            }
+        }
+
+        private static void ObjectSlotScaler(Options o, IResourceProvider globalSource, BlenderUtilities blender_util)
+        {
+            DBPFPackage package = new DBPFPackage(o.SourcePackage);
+            var localSource = new PackageResourceProvider(package);
+
+            var objectList = localSource.FindAllByType(ObjectDefinitionResource.Type);
+
+            //var modelList = localSource.FindAllByType(Model.Type);
+
+            var rigList = localSource.FindAllByType(RigResource.Type);
+
+            var rig = rigList.FirstOrDefault().Data<RigResource>();
+
+            //var swatches = localSource.FindAllByType(ObjectCatalogResource.Type);
+
+            //Console.WriteLine(swatches.Count());
+
+            //var models = new Collection<Model>();
+
+            //foreach (var resourceKey in swatches)
+            //{
+            //    var swatch = resourceKey.Data<ObjectCatalogResource>();)
+            //    Console.WriteLine(resourceKey);
+            //    try
+            //    {
+            //        Model model = globalSource.Find(resourceKey)?.Data<Model>() ?? localSource.Find(resourceKey)?.Data<Model>();
+            //        if (model != null)
+            //            models.Add(model);
+            //    }
+            //    catch(Exception e)
+            //    {
+            //        Console.WriteLine(e);
+            //    }
+            //}
+
+
+
+            Console.WriteLine(rig);
+
+            foreach (var modelRes in objectList.SelectMany(o => o.Data<ObjectDefinitionResource>().Model).Distinct())
+            {
+
+                //Console.WriteLine(model);
+
+                var model = globalSource.Find(modelRes)?.Data<Model>() ?? localSource.Find(modelRes)?.Data<Model>();
+
+
+                foreach (var lodEntry in model.Lods)
+                {
+                    var lod = lodEntry.Model.Resource is ModelLOD ? (ModelLOD)lodEntry.Model.Resource : (globalSource.Find(lodEntry.Model.Resource.Key)?.Data<ModelLOD>() ?? localSource.Find(lodEntry.Model.Resource.Key)?.Data<ModelLOD>());
+
+                    //uint[] array = lod.Meshes.SelectMany<ModelMesh, GeometryState>((Func<ModelMesh, IEnumerable<GeometryState>>)(x => (IEnumerable<GeometryState>)x.GeometryStates)).Select<GeometryState, uint>((Func<GeometryState, uint>)(x => x.State)).Distinct<uint>().ToArray<uint>();
+                    //var states = ((IEnumerable<uint>)array).Any<uint>() ? ((IEnumerable<uint>)array).Union<uint>((IEnumerable<uint>)new uint[1]).Select<uint, GeometryStateItem>((Func<uint, GeometryStateItem>)(x => new GeometryStateItem(this, new uint?(x)))).ToArray<GeometryStateItem>() : new GeometryStateItem[0];
+
+                    //foreach (var mesh in lod.Meshes)
+                    //{
+                    //    foreach(var state in mesh.GeometryStates)
+                    //    {
+                    //        Console.WriteLine(state.State);
+                    //        Console.WriteLine(state.StateName);
+                    //    }
+                    //}
+                    foreach (var state in lod.Meshes.SelectMany(a => a.GeometryStates).Select(a => a.State).Distinct())
+                    {
+                        Console.WriteLine(GetLodName(lodEntry.Id) + "_" + state + ".blend");
+                        //ExportMesh(lod, model.RenderableMeshes, rig, blender_util, "M:/Temp/" + GetLodName(lodEntry.Id) + "_" + state + ".blend", state.ToString());
+                    }
+                    //.GeometryStates.FirstOrDefault().StateName
+
+                }
+            }
+
+            //ConvertBuildToBaseGame(package);
+
+            //foreach (var obj in objectList)
+            //{
+            if (o.Scale != 0f)
+                {
+                    ScaleObjectSlots(rig, localSource, o.Scale);
+                }
+                else
+                {
+                    ScaleObjectSlots(rig, localSource, o.ScaleX, o.ScaleY, o.ScaleZ);
+                }
+            //}
+
+
+            package.Save(o.OutputPackage);
+        }
+
+        private static string GetLodName(ObjectLODID lodId)
+        {
+            switch (lodId)
+            {
+                case ObjectLODID.HighDetail:
+                    return "lod0";
+                case ObjectLODID.MediumDetail:
+                    return "lod1";
+                case ObjectLODID.LowDetail:
+                    return "lod2";
+                case ObjectLODID.VeryLowDetail:
+                    return "lod3";
+                case ObjectLODID.ShadowHighDetail:
+                    return "shadow0";
+                case ObjectLODID.ShadowMediumDetail:
+                    return "shadow1";
+                case ObjectLODID.ShadowLowDetail:
+                    return "shadow2";
+                case ObjectLODID.ShadowVeryLowDetail:
+                    return "shadow3";
+            }
+            return "unknown";
         }
 
         private static void UniversalDiaperCASPackager(Options options, IResourceProvider GlobalSource, BlenderUtilities blender_util)
@@ -2558,6 +2732,40 @@ namespace Sims4Hasher
             return origClipName;
         }
 
+        private static void ScaleObjectSlots(RigResource rig, IResourceProvider LocalSource, float scaleFactor)
+        {
+            Console.WriteLine("Simple Scale");
+            Console.WriteLine(scaleFactor);
+            ScaleObjectSlots(rig, LocalSource, scaleFactor, scaleFactor, scaleFactor);
+        }
+
+        private static void ScaleObjectSlots(RigResource rig, IResourceProvider LocalSource, float scaleFactorX, float scaleFactorY, float scaleFactorZ)
+        {
+            if (rig != null)
+            {
+                foreach (var bone in rig.Bones)
+                {
+                    bone.PositionX *= scaleFactorX;
+                    bone.PositionY *= scaleFactorY;
+                    bone.PositionZ *= scaleFactorZ;
+                    
+                }
+                //{
+                //    var slotRes = LocalSource.Find(slotKey)?.Data<SlotResource>();
+                //    if (slotRes != null)
+                //    {
+                //        foreach (var slot in slotRes.AllSlots())
+                //        {
+                //            Console.WriteLine("Thing");
+                //            slot.Position = new Vector3(slot.Offset.Position.X * scaleFactorX, slot.Offset.Position.Y * scaleFactorY, slot.Offset.Position.Z * scaleFactorZ);
+                //            slot.Offset.OnPropertyChanged("Position");
+                //            slot.OnPropertyChanged("Offset");
+                //        }
+                //    }
+                //}
+                //);
+            }
+        }
 
         private static void IncludeMesh(RegionMap RegionMap, IDBPFPackage LocalPackage, IResourceProvider LocalSource, bool IsOverride, IEnumerable<CASLODItem> Lods, IEnumerable<CASSwatch> Swatches, CASStandalone standalone)
         {
@@ -2732,6 +2940,125 @@ namespace Sims4Hasher
                     return S4Studio.Color.FromArgb(255, 255, 255, 255);
             }
         }
+
+
+        static void ExportMesh(ModelLOD ModelLOD, IEnumerable<MeshData> Meshes, RigResource rigResource, BlenderUtilities blender_util, string blender_path, string state)
+        {
+            string str1 = Path.Combine(blender_util.ScriptWorkingPath, Guid.NewGuid().ToString());
+            Console.WriteLine(str1);
+            if (!Directory.Exists(str1))
+                Directory.CreateDirectory(str1);
+            try
+            {
+                string str2 = Path.Combine(str1, "s4s.mlod");
+                string str3 = Path.Combine(str1, "s4s.rig");
+                string str4 = Path.Combine(str1, Path.GetFileName(blender_path));
+                using (FileStream fileStream = File.Create(str2))
+                    ModelLOD.Write((Stream)fileStream);
+                if (rigResource != null)
+                {
+                    using (FileStream fileStream = File.Create(str3))
+                        rigResource.Write((Stream)fileStream);
+                }
+                int num = 0;
+                foreach (MeshData objectMeshItem in Meshes.OfType<MeshData>())
+                {
+                    if (objectMeshItem.DiffuseTexture == null)
+                        continue;
+                    foreach(var bmp in objectMeshItem.DiffuseTexture)
+                    {
+                        string path1 = str1;
+                        DefaultInterpolatedStringHandler interpolatedStringHandler = new DefaultInterpolatedStringHandler(4, 1);
+                        interpolatedStringHandler.AppendFormatted<int>(num);
+                        interpolatedStringHandler.AppendLiteral(".png");
+                        string stringAndClear = interpolatedStringHandler.ToStringAndClear();
+                        string s = Path.Combine(path1, stringAndClear);
+                        bmp?.SaveFile(s);
+                        ++num;
+                    }
+                }
+                //string state = this.SelectedState?.State.ToString() ?? "";
+                Console.WriteLine(str1);
+                Console.WriteLine(str2);
+                Console.WriteLine(str3);
+
+                Console.WriteLine(str4);
+                blender_util.ExportMlod(str4, str3, str2, state);
+                File.Copy(str4, blender_path, true);
+            }
+            catch (Exception e)
+            {
+                Console.WriteLine(e);
+            }
+            finally
+            {
+                //Directory.Delete(str1, true);
+            }
+        }
+
+        static void ImportMesh(ModelLOD ModelLOD, RigResource rigResource, BlenderUtilities blender_util, string blender_path, string state)
+        {
+            string str1 = Path.Combine(blender_util.ScriptWorkingPath, Guid.NewGuid().ToString());
+            try
+            {
+                if (!Directory.Exists(str1))
+                    Directory.CreateDirectory(str1);
+                string str2 = Path.Combine(str1, "s4s.mlod");
+                string path = Path.Combine(str1, "s4s.out.mlod");
+                string str3 = Path.Combine(str1, "s4s.rig");
+                if (rigResource != null)
+                {
+                    using (FileStream fileStream = File.Create(str3))
+                        rigResource.Write((Stream)fileStream);
+                }
+                using (FileStream fileStream = File.Create(str2))
+                    ModelLOD.Write((Stream)fileStream);
+                File.GetLastAccessTime(str2);
+                //string state = this.SelectedState?.State.ToString() ?? "";
+                blender_util.ImportMlod(blender_path, str2, str3, state);
+                File.GetLastAccessTime(str2);
+                if (File.Exists(path))
+                {
+                    using (FileStream fileStream = File.OpenRead(path))
+                    {
+                        ModelLOD import_lod = new ModelLOD();
+                        import_lod.Key.Set(ModelLOD.Key);
+                        import_lod.Read((Stream)fileStream);
+                        ModelLOD.Meshes = import_lod.Meshes;
+                        //parent.RecalculateBounds();
+                        UpdatePosScales(ModelLOD);
+                    }
+                }
+            }
+            finally
+            {
+                Directory.Delete(str1, true);
+            }
+        }
+
+        static void UpdatePosScales(ModelLOD ModelLOD)
+        {
+            if (ModelLOD.Key.Group < 65536U)
+                return;
+            foreach (ModelMesh mesh in ModelLOD.Meshes)
+            {
+                MaterialDefinition materialDefinition = mesh.Material.Resource is MaterialSet resource1 ? resource1.Entries.Select<MaterialSetEntry, MaterialDefinition>((Func<MaterialSetEntry, MaterialDefinition>)(x => x.Material.Resource as MaterialDefinition)).FirstOrDefault<MaterialDefinition>() : mesh.Material.Resource as MaterialDefinition;
+                if (materialDefinition != null && materialDefinition.Shader != ShaderType.Shadowmap && mesh.ScaleOffsets.Resource is MaterialDefinition resource2)
+                {
+                    ShaderData shaderData = resource2.Material.Items.FirstOrDefault<ShaderData>((Func<ShaderData, bool>)(x => x.Field == ShaderField.PosScale));
+                    if (shaderData != null)
+                    {
+                        float[] floatValue = shaderData.FloatValue;
+                        if (floatValue != null)
+                        {
+                            for (int index = 0; index < floatValue.Length; ++index)
+                                floatValue[index] = 1f;
+                        }
+                    }
+                }
+            }
+        }
+
 
         static void ExportClip(IResourceProvider resources, ClipResource clip, SimBody sim, string outputDir, ISet<string> clipList, BlenderUtilities blender_util)
         {
